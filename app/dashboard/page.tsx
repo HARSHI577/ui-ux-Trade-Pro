@@ -35,7 +35,7 @@ const fadeinup = {
 
 const Header = () => {
   const [ismenuopen, setismenuopen] = useState(false);
-  const [notification, setnotification] = useState(3);
+  const [notification] = useState(3);
   const router = useRouter();
   return (
     <motion.header

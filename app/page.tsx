@@ -1,5 +1,4 @@
 "use client";
-import { div, p } from "framer-motion/client";
 import {
   ArrowRight,
   BarChart2,
@@ -13,7 +12,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { Children, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { useRouter } from "next/navigation";
 const Animatedsection = ({ children }: any) => {
