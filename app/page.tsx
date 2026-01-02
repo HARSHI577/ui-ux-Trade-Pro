@@ -1,4 +1,5 @@
 "use client";
+
 import {
   ArrowRight,
   BarChart2,
@@ -12,9 +13,13 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useInView } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/page";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+
 const Animatedsection = ({ children }: any) => {
   const ref = useRef(null);
   const isinview = useInView(ref, { once: true, amount: 0.3 });
@@ -29,7 +34,8 @@ const Animatedsection = ({ children }: any) => {
     </motion.section>
   );
 };
-const FeatureBox = ({ icon, title, description, delay }: any) => {
+
+const FeatureBox = ({ icon, title, description }: any) => {
   const [ishovered, setishovered] = useState(false);
   return (
     <motion.div
@@ -39,7 +45,7 @@ const FeatureBox = ({ icon, title, description, delay }: any) => {
       }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay }}
+      transition={{ duration: 0.6 }}
       onHoverStart={() => setishovered(true)}
       onHoverEnd={() => setishovered(false)}
       className="bg-gray-800 p-6 rounded-xl shadow-1g flex flex-col items-center text-center h-full relative overflow-hidden"
@@ -75,8 +81,35 @@ const FeatureBox = ({ icon, title, description, delay }: any) => {
 };
 
 export default function Home() {
-  const router = useRouter()
+  const router = useRouter();
   const containeref = useRef(null);
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const logout = async () => {
+    await signOut(auth);
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
+
   const tradingFeatures = [
     {
       icon: <Globe size={32} />,
@@ -127,6 +160,7 @@ export default function Home() {
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
+          onClick={() => router.push("/")}
           className="text-3xl font-bold text-blue-500"
         >
           TradePro
@@ -147,18 +181,76 @@ export default function Home() {
             ))}
           </ul>
         </nav>
+        <div className="flex space-x-2 mt-4 md:mt-0">
+          <motion.button
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="hidden md:block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors transform hover:scale-105"
+            onClick={() => router.push("/dashboard")}
+          >
+            Start Trading
+          </motion.button>
+
+          {!user && (
+            <motion.button
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="hidden md:block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors transform hover:scale-105"
+              onClick={() => router.push("/auth")}
+            >
+              Sign In
+            </motion.button>
+          )}
+
+          {user && (
+            <div className="hidden md:block relative" ref={dropdownRef}>
+              <button
+                onClick={() => setOpen((prev) => !prev)}
+                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center shadow-md border border-gray-700 hover:border-blue-500 transition-colors"
+              >
+                <span className="text-lg">👤</span>
+              </button>
+
+              <AnimatePresence>
+                {open && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 4 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-3 w-64 rounded-xl bg-gray-800 border border-gray-700 shadow-xl overflow-hidden z-20"
+                  >
+                    <div className="px-4 py-3 border-gray-700 bg-gray-850/50">
+                      <p className="text-sm text-gray-400">Signed in as :</p>
+                      <p className="text-sm font-semibold truncate">
+                        {user.email || "User"}
+                      </p>
+                    </div>
+
+                    <div className="px-4 py-3 space-y-1 text-left"></div>
+
+                    <button
+                      onClick={logout}
+                      className="w-full text-left font-bold px-4 py-3 text-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
         <motion.button
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="hidden md:block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors transform hover:scale-105"
-          onClick={()=>router.push('/dashboard')}
-        >
-          Start Trading
-        </motion.button>
-        <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="md:hidden text-white"
@@ -173,7 +265,7 @@ export default function Home() {
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.6 }}
-          className="md:hidden bg-gray-800 px-4"
+          className="md:hidden bg-gray-800 px-4 py-2"
         >
           <ul className="space-y-3">
             {["Markets", "Trading", "Analysis", "Learn"].map((item, index) => (
@@ -183,7 +275,7 @@ export default function Home() {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 key={index}
               >
-                <span className=" block text-gray-300 hover:text-blue-500 transition-colors py-2">
+                <span className="block text-gray-300 hover:text-blue-500 transition-colors py-2">
                   {item}
                 </span>
               </motion.li>
@@ -193,13 +285,65 @@ export default function Home() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <button className="w-full bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors transform hover:scale-105">
+              <button
+                className="w-full bg-blue-600 text-white mb-3 px-6 py-2 rounded hover:bg-blue-700 transition-colors transform hover:scale-105"
+                onClick={() => router.push("/dashboard")}
+              >
                 Start Trading
               </button>
+              {!user && (
+                <button
+                  className="w-full bg-blue-600 text-white mb-1 px-6 py-2 rounded hover:bg-blue-700 transition-colors transform hover:scale-105"
+                  onClick={() => router.push("/auth")}
+                >
+                  Sign In
+                </button>
+              )}
+              {user && (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setOpen((prev) => !prev)}
+                    className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center shadow-md border border-gray-700 hover:border-blue-500 transition-colors"
+                  >
+                    <span className="text-lg">👤</span>
+                  </button>
+
+                  <AnimatePresence>
+                    {open && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                        animate={{ opacity: 1, scale: 1, y: 4 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className="absolute left-0 mt-3 w-64 rounded-xl bg-gray-800 border border-gray-700 shadow-xl overflow-hidden z-20"
+                      >
+                        <div className="px-4 py-3 border-gray-700 bg-gray-850/50">
+                          <p className="text-sm text-gray-400">
+                            Signed in as :
+                          </p>
+                          <p className="text-sm font-semibold truncate">
+                            {user.email || "User"}
+                          </p>
+                        </div>
+
+                        <div className="px-4 py-3 space-y-1 text-left"></div>
+
+                        <button
+                          onClick={logout}
+                          className="w-full text-left font-bold px-4 py-3 text-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
+                        >
+                          Logout
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </motion.li>
           </ul>
         </motion.div>
       )}
+
       <main className="container mx-auto px-4">
         <Animatedsection>
           <div className="text-center py-28 ">

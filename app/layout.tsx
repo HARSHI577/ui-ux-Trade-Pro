@@ -9,6 +9,7 @@ import {
   Twitter,
   Youtube,
 } from "lucide-react";
+import { AuthProvider } from "@/context/page";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,15 +35,35 @@ const Footer = () => (
           <p className="text-sm mb-2">ABCD Road,Banglore</p>
           <p className="text-sm mb-2">Banglore-560103</p>
           <p className="text-sm mb-2">
-            <a href="" className="text-blue-500 hover:underline">Contact Us</a>
+            <a href="" className="text-blue-500 hover:underline">
+              Contact Us
+            </a>
           </p>
           <div className="flex space-x-4">
-            <Facebook className="text-gray-400 hover:text-blue-500 cursor-pointer" size={20}/>
-            <Twitter className="text-gray-400 hover:text-blue-500 cursor-pointer" size={20}/>
-            <Youtube className="text-gray-400 hover:text-blue-500 cursor-pointer" size={20}/>
-            <Instagram className="text-gray-400 hover:text-blue-500 cursor-pointer" size={20}/>
-            <Linkedin className="text-gray-400 hover:text-blue-500 cursor-pointer" size={20}/>
-            <Send className="text-gray-400 hover:text-blue-500 cursor-pointer" size={20}/>
+            <Facebook
+              className="text-gray-400 hover:text-blue-500 cursor-pointer"
+              size={20}
+            />
+            <Twitter
+              className="text-gray-400 hover:text-blue-500 cursor-pointer"
+              size={20}
+            />
+            <Youtube
+              className="text-gray-400 hover:text-blue-500 cursor-pointer"
+              size={20}
+            />
+            <Instagram
+              className="text-gray-400 hover:text-blue-500 cursor-pointer"
+              size={20}
+            />
+            <Linkedin
+              className="text-gray-400 hover:text-blue-500 cursor-pointer"
+              size={20}
+            />
+            <Send
+              className="text-gray-400 hover:text-blue-500 cursor-pointer"
+              size={20}
+            />
           </div>
         </div>
         <div>
@@ -115,7 +136,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <Footer />
       </body>
     </html>

@@ -26,6 +26,8 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import MultiAssetOverlayChart from "@/components//ui/MultiAssetOverlayChart";
+import PortfolioSimulator from "@/components/ui/PortfolioSimulator";
 
 const fadeinup = {
   initial: { opacity: 0, y: 20 },
@@ -210,12 +212,12 @@ const Header = () => {
 const Tabsection = () => {
   const [activeTab, setactivetab] = useState("Stocks");
   return (
-    <motion.div {...fadeinup} className="border-b border-gray-700">
+    <div className="border-b border-gray-700">
       <div className="container mx-auto px-4">
         <ul className="flex space-x-8">
           {["Stocks", "Mutual funds", "ETFs", "Options"].map((tab) => (
             <motion.li
-              className={`py-2 cursor-pionter whitespace-nowrap ${
+              className={`py-1 cursor-pointer whitespace-nowrap ${
                 activeTab === tab
                   ? "border-b-2 border-blue-500 text-blue-500"
                   : "text-gray-300 hover:text-blue-500 transition-colors"
@@ -230,7 +232,7 @@ const Tabsection = () => {
           ))}
         </ul>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -265,11 +267,7 @@ const Marketindices = () => {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4"
-    >
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
       {marketdata.map((index) => (
         <motion.div
           key={index.name}
@@ -304,7 +302,7 @@ const Marketindices = () => {
           </div>
         </motion.div>
       ))}
-    </motion.div>
+    </div>
   );
 };
 
@@ -368,7 +366,7 @@ const StockCard = ({
 };
 
 const MostBought = () => (
-  <motion.div {...fadeinup} className="my-8">
+  <div className="my-8">
     <div className="flex justify-between items-center">
       <h2 className="text-xl font-semibold text-white mb-2">
         Most Bought on TradePro
@@ -389,7 +387,7 @@ const MostBought = () => (
       <StockCard name="Energy" initalPrice={246.4} />
       <StockCard name="Zomato" initalPrice={9346.4} />
     </div>
-  </motion.div>
+  </div>
 );
 
 const Productandtools = () => {
@@ -402,7 +400,7 @@ const Productandtools = () => {
   ];
 
   return (
-    <motion.div {...fadeinup} className="my-8">
+    <div className="my-8">
       <h2 className="text-xl font-semibold text-white mb-2">
         Products & Tools
       </h2>
@@ -425,12 +423,12 @@ const Productandtools = () => {
           </motion.div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
 const Topgainers = () => (
-  <motion.div {...fadeinup} className="my-8">
+  <div className="my-8">
     <div className="flex justify-between items-center">
       <h2 className="text-xl font-semibold text-white mb-2">
         Most Bought on TradePro
@@ -451,7 +449,7 @@ const Topgainers = () => (
       <StockCard name="ICICI" initalPrice={395.4} />
       <StockCard name="Airtel" initalPrice={85.4} />
     </div>
-  </motion.div>
+  </div>
 );
 
 const TopByMarketCap = () => {
@@ -466,7 +464,7 @@ const TopByMarketCap = () => {
   ];
 
   return (
-    <motion.div {...fadeinup} className="py-8">
+    <div className="py-8">
       <h2 className="text-xl font-semibold text-white mb-4">
         Top by Market Cap
       </h2>
@@ -527,7 +525,7 @@ const TopByMarketCap = () => {
           </motion.div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -535,14 +533,16 @@ const page = () => {
   return (
     <div className="bg-gray-900 min-h-screen text-gray-300">
       <Header />
-      <main className="container mx-auto px-4">
+      <motion.main {...fadeinup} className="container mx-auto px-4">
         <Tabsection />
         <Marketindices />
+        <MultiAssetOverlayChart />
+        <PortfolioSimulator />
         <MostBought />
         <Productandtools />
         <Topgainers />
         <TopByMarketCap />
-      </main>
+      </motion.main>
     </div>
   );
 };

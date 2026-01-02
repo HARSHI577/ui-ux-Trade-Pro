@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,12 +22,18 @@ import {
   PlusCircle,
   DollarSign,
 } from "lucide-react";
+import AnalyticsPanel from "@/components/AnalyticsPanel";
+import { calculateRSI, calculateVolatility } from "@/utils/indicators";
+
 const fadeinup = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5 },
 };
 import { Chart } from "react-google-charts";
+import { calculateSMA, calculateBollingerBands } from "@/utils/indicators";
+import { applyMAStrategy } from "@/components/strategies";
+
 const Header = () => {
   const [ismenuopen, setismenuopen] = useState(false);
   const [notification, setnotification] = useState(3);
@@ -203,10 +209,7 @@ const Header = () => {
 };
 const Breadcrumb = ({ stock }) => {
   return (
-    <motion.div
-      {...fadeinup}
-      className="flex items-center space-x-2 text-sm text-gray-400 my-4"
-    >
+    <div className="flex items-center space-x-2 text-sm text-gray-400 my-4">
       <a href="/" className="hover:text-blue-500">
         Home
       </a>
@@ -216,45 +219,106 @@ const Breadcrumb = ({ stock }) => {
       </a>
       <span>/</span>
       <span className="hover:text-blue-500">{stock}</span>
-    </motion.div>
+    </div>
   );
 };
+
+const bodySize = (o, c) => Math.abs(c - o);
+const candleRange = (h, l) => h - l;
+const upperWick = (h, o, c) => h - Math.max(o, c);
+const lowerWick = (l, o, c) => Math.min(o, c) - l;
+
+const isDoji = (o, h, l, c) => bodySize(o, c) <= candleRange(h, l) * 0.1;
+
+const isHammer = (o, h, l, c) =>
+  lowerWick(l, o, c) >= bodySize(o, c) * 2 &&
+  upperWick(h, o, c) <= bodySize(o, c);
+
 const generaterandomdata = (currentvalue, points) => {
-  const data = [["Time", "Low", "Open", "Close", "High"]];
+  const chartData = [["Time", "Low", "Open", "Close", "High"]];
+  const patterns = [];
+
   for (let i = 0; i < points; i++) {
-    const time = new Date(Date.now() - i * 5000).toLocaleTimeString();
+    const time = new Date().toISOString().slice(11, 19);
     const open = currentvalue + Math.random() * 10 - 5;
     const close = open + Math.random() * 10 - 5;
     const low = Math.min(open, close) - Math.random() * 5;
     const high = Math.max(open, close) + Math.random() * 5;
-    data.push([time, low, open, close, high]);
+
+    let pattern = "";
+    if (isDoji(open, high, low, close)) pattern = "Doji";
+    else if (isHammer(open, high, low, close)) pattern = "Hammer";
+
+    chartData.push([time, low, open, close, high]);
+
+    if (pattern) {
+      patterns.push({ time, pattern });
+    }
   }
-  return data;
+
+  return { chartData, patterns };
 };
+
 const Stockchart = ({ stock }) => {
-  const [timerange, settimerange] = useState("5M");
-  const [data, setdata] = useState(generaterandomdata(54512, 5));
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const [timerange, setTimerange] = useState("5M");
+
+  const [{ chartData, patterns }, setChartState] = useState(
+    generaterandomdata(485450, 50)
+  );
+
+  const [showSMA, setShowSMA] = useState(true);
+  const [showBB, setShowBB] = useState(false);
+  const [smaPeriod, setSmaPeriod] = useState(50);
+  const [strategyEnabled, setStrategyEnabled] = useState(true);
+  const [showMAStat, setShowMAStat] = useState(true);
+  const [showRSIStat, setShowRSIStat] = useState(true);
+  const [showVolatilityStat, setShowVolatilityStat] = useState(true);
+
+  const closePrices = chartData.slice(1).map((d) => d[3]);
+
+  const sma = showSMA ? calculateSMA(closePrices, smaPeriod) : [];
+
+  const latestSMA = sma.length > 0 ? sma[sma.length - 1] : null;
+
+  const rsi = calculateRSI(closePrices);
+
+  const volatility = calculateVolatility(closePrices);
+
+  const signals = strategyEnabled ? applyMAStrategy(closePrices, sma) : [];
+
+  const recentSignals = useMemo(
+    () =>
+      signals
+        .map((s, i) => (s ? { s, time: chartData[i + 1]?.[0] } : null))
+        .filter(Boolean)
+        .slice(-10),
+    [signals, chartData]
+  );
+
   const [currentvalue, setcurentvalue] = useState(485451);
   const [change, setchange] = useState({ value: 0, percentage: 0 });
-  //   console.log(data)
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const newData = generaterandomdata(
-        currentvalue,
-        getDataPoints(timerange)
-      );
-      setdata((prev) => [...prev, ...newData.slice(1)]);
-      setcurentvalue(newData[newData.length - 1][3]);
-      console.log(newData);
-      const initalvalue = data[1][2];
-      const changevalue = currentvalue - initalvalue;
-      const changepercantage = (changevalue / initalvalue) * 100;
-      setchange({ value: changevalue, percentage: changepercantage });
+      const result = generaterandomdata(currentvalue, getDataPoints(timerange));
+
+      setChartState((prev) => ({
+        chartData: [...prev.chartData, ...result.chartData.slice(1)],
+        patterns: [...prev.patterns, ...result.patterns],
+      }));
+
+      setcurentvalue(result.chartData[result.chartData.length - 1][3]);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [timerange, currentvalue, data]);
+  }, [timerange]);
+
   const getDataPoints = (range) => {
     switch (range) {
       case "5M":
@@ -301,10 +365,7 @@ const Stockchart = ({ stock }) => {
     []
   );
   return (
-    <motion.div
-      {...fadeinup}
-      className="bg-gray-800 p-6 rounded-lg shadow-lg my-6"
-    >
+    <div className="bg-gray-800 p-6 rounded-lg shadow-lg my-6">
       <div className="flex flex-cols md:flex-row justify-between items-start md:items-center mb-4">
         <div>
           <h2 className="text-2xl font-bold text-white">{stock}</h2>
@@ -313,6 +374,8 @@ const Stockchart = ({ stock }) => {
               {currentvalue.toFixed(2)}
             </span>
             <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className={`text-sm flex items-center ${
                 change.value >= 0 ? "text-green-500" : "text-red-500"
               }`}
@@ -345,18 +408,133 @@ const Stockchart = ({ stock }) => {
           </motion.button>
         </div>
       </div>
-      <Chart
-        chartType="CandlestickChart"
-        width="100%"
-        height="400px"
-        data={data}
-        options={options}
-      />
+
+      <div className="flex flex-wrap gap-6 mb-4 text-sm text-white">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showSMA}
+            onChange={() => setShowSMA(!showSMA)}
+          />
+          SMA
+        </label>
+
+        <select
+          value={smaPeriod}
+          onChange={(e) => setSmaPeriod(Number(e.target.value))}
+          className="bg-gray-700 px-2 py-1 rounded"
+        >
+          <option value={20}>SMA 20</option>
+          <option value={50}>SMA 50</option>
+          <option value={200}>SMA 200</option>
+        </select>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showBB}
+            onChange={() => setShowBB(!showBB)}
+          />
+          Bollinger Bands
+        </label>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={strategyEnabled}
+            onChange={() => setStrategyEnabled(!strategyEnabled)}
+          />
+          MA Strategy
+        </label>
+      </div>
+
+      <div className="flex gap-4 mb-4 text-sm text-white">
+        <label>
+          <input
+            type="checkbox"
+            checked={showMAStat}
+            onChange={() => setShowMAStat(!showMAStat)}
+          />{" "}
+          SMA
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            checked={showRSIStat}
+            onChange={() => setShowRSIStat(!showRSIStat)}
+          />{" "}
+          RSI
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            checked={showVolatilityStat}
+            onChange={() => setShowVolatilityStat(!showVolatilityStat)}
+          />{" "}
+          Volatility
+        </label>
+      </div>
+
+      {mounted && (
+        <AnalyticsPanel
+          showMA={showMAStat}
+          showRSI={showRSIStat}
+          showVolatility={showVolatilityStat}
+          smaValue={latestSMA}
+          rsiValue={rsi}
+          volatilityValue={volatility}
+        />
+      )}
+
+      {mounted && (
+        <>
+          <div className="w-full h-[400px]">
+            <Chart
+              chartType="CandlestickChart"
+              width="100%"
+              height="100%"
+              data={chartData}
+              options={options}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-4 text-sm">
+            {patterns.slice(-5).map((p, i) => (
+              <span
+                key={i}
+                className={`px-2 py-1 rounded text-white ${
+                  p.pattern === "Hammer" ? "bg-green-600" : "bg-yellow-600"
+                }`}
+              >
+                {p.pattern} @ {p.time}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {strategyEnabled && (
+        <div className="flex flex-wrap gap-2 mt-4 text-sm">
+          {recentSignals.map((item, i) => (
+            <span
+              key={i}
+              className={`px-2 py-1 rounded text-white ${
+                item.s === "BUY" ? "bg-green-600" : "bg-red-600"
+              }`}
+            >
+              {item.s} @ {item.time}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex justify-between mt-4">
         {["5M", "10M", "15M", "30M", "1H"].map((range) => (
           <motion.button
             key={range}
-            onClick={() => settimerange(range)}
+            onClick={() => setTimerange(range)}
             className={`text-sm ${
               timerange === range ? "text-blue-500" : "text-gray-500"
             } hover:text-blue-500 transition-colors flex items-center `}
@@ -367,7 +545,7 @@ const Stockchart = ({ stock }) => {
           </motion.button>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 };
 const OptionTable = ({ stock }) => {
@@ -406,9 +584,9 @@ const OptionTable = ({ stock }) => {
       setoption((prev) =>
         prev.map((option) => ({
           ...option,
-          callPrice: option.callPrice + (Math.random() - 0, 5) * 5,
+          callPrice: option.callPrice + (Math.random() - 0.5) * 5,
           callChange: (Math.random() - 0.5) * 10,
-          putPrice: option.putPrice + (Math.random() - 0, 5) * 5,
+          putPrice: option.putPrice + (Math.random() - 0.5) * 5,
           putChange: (Math.random() - 0.5) * 10,
         }))
       );
@@ -416,10 +594,7 @@ const OptionTable = ({ stock }) => {
     return () => clearInterval(interval);
   }, []);
   return (
-    <motion.div
-      {...fadeinup}
-      className="bg-gray-800 p-6 rounded-lg shadow-lg my-6"
-    >
+    <div className="bg-gray-800 p-6 rounded-lg shadow-lg my-6">
       <h3 className="text-xl font-bold text-white mb-4 flex items-center">
         {" "}
         <DollarSign size={24} className="mr-2" />
@@ -427,7 +602,7 @@ const OptionTable = ({ stock }) => {
       </h3>
       <table className="w-full text-left">
         <thead>
-          <tr className="text-gray-400 border-b  border-gray-700">
+          <tr className="text-gray-400 border-b border-gray-700">
             <th className="py-2">Strike</th>
             <th className="py-2">Call</th>
             <th className="py-2">Put</th>
@@ -435,11 +610,7 @@ const OptionTable = ({ stock }) => {
         </thead>
         <tbody>
           {option.map((option, index) => (
-            <motion.tr
-              key={index}
-              className="border-b border-gray-700"
-              {...fadeinup}
-            >
+            <tr key={index} className="border-b border-gray-700">
               <td className="py-2 text-white">{option.strike}</td>
               <td className="py-2">
                 <div className="text-white">{option.callPrice.toFixed(2)}</div>
@@ -464,30 +635,31 @@ const OptionTable = ({ stock }) => {
                   }
                 >
                   {option.putChange > 0 ? (
-                    <ArrowUpRight size={16} className="inline mr-1"/>
+                    <ArrowUpRight size={16} className="inline mr-1" />
                   ) : (
-                    <ArrowDownRight size={16} className="inline mr-1"/>
+                    <ArrowDownRight size={16} className="inline mr-1" />
                   )}{" "}
                   {option.putChange.toFixed(2)}
                 </div>
               </td>
-            </motion.tr>
+            </tr>
           ))}
         </tbody>
       </table>
-    </motion.div>
+    </div>
   );
 };
+
 const page = () => {
   const { id } = useParams();
   return (
     <div className="bg-gray-900 min-h-screen text-gray-300">
       <Header />
-      <main className="container mx-auto px-4">
+      <motion.main {...fadeinup} className="container mx-auto px-4">
         <Breadcrumb stock={id} />
         <Stockchart stock={id} />
         <OptionTable stock={id} />
-      </main>
+      </motion.main>
     </div>
   );
 };
