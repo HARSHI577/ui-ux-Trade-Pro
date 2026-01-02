@@ -370,6 +370,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.6 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={()=>router.push("/auth")}
               className="bg-blue-600 text-white px-8 py-4 rounded-md text-xl hover:bg-blue-700 transition-colors flex items-center mx-auto"
             >
               Open Free Account <ArrowRight className="ml-2" />
@@ -517,6 +518,7 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={()=>router.push("/auth")}
               className="bg-white text-blue-600 px-8 py-4 rounded-md text-xl font-bold hover:bg-gray-200 transition-colors relative z-10"
             >
               Create Free Account
